@@ -1,53 +1,52 @@
-// stats.js
+const sendErrorToOwner = (error) => {
+    // Implementation to send error to owner
+    console.error("An error occurred:", error);
+    message.client.send(`🚨 Error: ${error.message}`);
+};
 
-// WhatsApp Bot Stats Command
+module.exports = {
+    top: async (message) => {
+        try {
+            const data = await message.client.db.query(`SELECT * FROM leaderboard ORDER BY score DESC LIMIT 10`);
+            message.send(`📈 Top Players:
+${data.map((player, index) => `#${index + 1} - ${player.name}: ${player.score} points`).join('\n')}`);
+        } catch (error) {
+            sendErrorToOwner(error);
+        }
+    },
 
-const { MessageType } = require('@adiwajshing/baileys');
+    rank: async (message) => {
+        try {
+            const user = message.author;
+            const data = await message.client.db.query(`SELECT score FROM leaderboard WHERE userId = ${user.id}`);
+            if (data.length > 0) {
+                message.send(`🏅 Your rank is: ${data[0].rank}`);
+            } else {
+                message.send(`❌ You are not ranked yet.`);
+            }
+        } catch (error) {
+            sendErrorToOwner(error);
+        }
+    },
 
-// Function to send stats
-const sendStats = async (client, chatId) => {
-    try {
-        const serverStats = await getServerStats(); // Fetch server stats from an API or database
-        const responseMessage = generateStatsMessage(serverStats);
+    ghosts: async (message) => {
+        try {
+            const data = await message.client.db.query(`SELECT * FROM ghosts WHERE userId = ${message.author.id}`);
+            message.send(`👻 Your Ghosts:
+${data.map(ghost => ghost.name).join(', ')}`);
+        } catch (error) {
+            sendErrorToOwner(error);
+        }
+    },
 
-        // Send message with enhanced formatting
-        await client.sendMessage(chatId, responseMessage, MessageType.text);
-    } catch (error) {
-        console.error('Error fetching stats:', error);
-        // Send user-friendly error message
-        await client.sendMessage(chatId, 'Sorry, I encountered an error while fetching the stats. Please try again later.', MessageType.text);
+    mystats: async (message) => {
+        try {
+            const stats = await message.client.db.query(`SELECT * FROM userStats WHERE userId = ${message.author.id}`);
+            message.send(`📊 Your Stats:
+Score: ${stats.score}
+Games Played: ${stats.gamesPlayed}`);
+        } catch (error) {
+            sendErrorToOwner(error);
+        }
     }
 };
-
-// Function to generate stats message with formatting
-const generateStatsMessage = (stats) => {
-    return `*WhatsApp Bot Stats*
-
-*Total Users:* ${stats.totalUsers}
-*Active Sessions:* ${stats.activeSessions}
-*Server Uptime:* ${formatUptime(stats.uptime)}
-
-*Last Updated:* ${new Date().toUTCString()}`;
-};
-
-// Function to format uptime
-const formatUptime = (uptime) => {
-    const seconds = parseInt(uptime, 10);
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const response = [];
-    if (hours) response.push(`${hours} hour${hours > 1 ? 's' : ''}`);
-    if (minutes) response.push(`${minutes} minute${minutes > 1 ? 's' : ''}`);
-    return response.join(' and ');
-};
-
-// Simulate fetching server stats (mock function)
-const getServerStats = async () => {
-    return {
-        totalUsers: 150,
-        activeSessions: 75,
-        uptime: 3600 // in seconds
-    };
-};
-
-module.exports = { sendStats };
